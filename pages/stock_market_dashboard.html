@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../css/main.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module" src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Fbrazilian4507back.builtwithrocket.new&_be=https%3A%2F%2Fapplication.rocket.new&_v=0.1.5"></script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
@@ -45,6 +46,30 @@
         <div class="mb-8 text-center">
             <h2 class="text-3xl font-bold text-white mb-2">Dashboard de Ações</h2>
             <p class="text-gray-300">Monitore o desempenho das principais ações brasileiras</p>
+        </div>
+
+        <!-- Search and Controls -->
+        <div class="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="relative w-full sm:w-96">
+                <input id="searchInput" type="text" placeholder="Pesquisar ticker (ex: PETR4)" class="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200" />
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <div class="flex space-x-2">
+                <button id="favoritesToggle" class="btn-primary bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200">
+                    <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                    <span>Favoritos</span>
+                </button>
+                <button id="refreshButton" class="btn-primary bg-primary-600 px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span>Atualizar</span>
+                </button>
+            </div>
         </div>
 
         <!-- Loading State -->
@@ -103,18 +128,25 @@
         <!-- Market Summary -->
         <div id="marketSummary" class="hidden mt-12 bg-gray-800 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
             <h3 class="text-xl font-bold text-white mb-4">Resumo do Mercado</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="text-center">
-                    <p class="text-sm text-gray-300">Ações em Alta</p>
-                    <p id="gainersCount" class="text-2xl font-bold text-success-600">0</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- Chart Container -->
+                <div>
+                    <canvas id="marketChart" width="400" height="300"></canvas>
                 </div>
-                <div class="text-center">
-                    <p class="text-sm text-gray-300">Ações em Baixa</p>
-                    <p id="losersCount" class="text-2xl font-bold text-error-600">0</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-sm text-gray-300">Estáveis</p>
-                    <p id="neutralCount" class="text-2xl font-bold text-gray-400">0</p>
+                <!-- Stats -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="text-center p-4 bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-300">Ações em Alta</p>
+                        <p id="gainersCount" class="text-2xl font-bold text-success-600">0</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-300">Ações em Baixa</p>
+                        <p id="losersCount" class="text-2xl font-bold text-error-600">0</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-700 rounded-lg">
+                        <p class="text-sm text-gray-300">Estáveis</p>
+                        <p id="neutralCount" class="text-2xl font-bold text-gray-400">0</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -131,8 +163,8 @@
     </footer>
 
     <script>
-        // Stock symbols to track
-        const STOCK_SYMBOLS = ['GOAU4', 'BBAS3', 'PETR4'];
+        // Stock symbols to track - default list
+        let STOCK_SYMBOLS = ['GOAU4', 'BBAS3', 'PETR4', 'VALE3', 'ITUB4'];
         
         // Company information
         const COMPANY_INFO = {
@@ -147,11 +179,66 @@
             'PETR4': {
                 name: 'Petróleo Brasileiro S.A.',
                 description: 'Petróleo e Gás'
+            },
+            'VALE3': {
+                name: 'Vale S.A.',
+                description: 'Mineração'
+            },
+            'ITUB4': {
+                name: 'Itaú Unibanco Holding S.A.',
+                description: 'Serviços Financeiros'
             }
         };
 
+        // Initialize chart variable
+        let marketChart = null;
+
+        // Track favorites in localStorage
+        const getFavorites = () => {
+            const storedFavorites = localStorage.getItem('favoriteStocks');
+            return storedFavorites ? JSON.parse(storedFavorites) : [];
+        };
+
+        const saveFavorites = (favorites) => {
+            localStorage.setItem('favoriteStocks', JSON.stringify(favorites));
+        };
+
+        const addToFavorites = (symbol) => {
+            const favorites = getFavorites();
+            if (!favorites.includes(symbol)) {
+                favorites.push(symbol);
+                saveFavorites(favorites);
+            }
+        };
+
+        const removeFromFavorites = (symbol) => {
+            const favorites = getFavorites();
+            const updatedFavorites = favorites.filter(fav => fav !== symbol);
+            saveFavorites(updatedFavorites);
+        };
+
+        const isFavorite = (symbol) => {
+            return getFavorites().includes(symbol);
+        };
+
+        // Track viewed symbols
+        const getViewedSymbols = () => {
+            const storedSymbols = localStorage.getItem('viewedSymbols');
+            return storedSymbols ? JSON.parse(storedSymbols) : STOCK_SYMBOLS;
+        };
+
+        const saveViewedSymbols = (symbols) => {
+            localStorage.setItem('viewedSymbols', JSON.stringify(symbols));
+        };
+
+        // Initialize viewed symbols from localStorage or defaults
+        STOCK_SYMBOLS = getViewedSymbols();
+
         // Format currency in Brazilian Real
         function formatCurrency(value) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return 'N/A';
+            }
             return new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
@@ -162,6 +249,9 @@
 
         // Format percentage
         function formatPercentage(value) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return 'N/A';
+            }
             const sign = value >= 0 ? '+' : '';
             return `${sign}${value.toFixed(2)}%`;
         }
@@ -180,11 +270,19 @@
         // Create stock card HTML
         function createStockCard(stock) {
             const company = COMPANY_INFO[stock.symbol] || { name: stock.symbol, description: 'Ação Brasileira' };
-            const changeClass = stock.change >= 0 ? 'text-success-600 bg-success-50' : 'text-error-600 bg-error-50';
-            const changeIcon = stock.change >= 0 ? '↗' : '↘';
+            const changeClass = stock.change >= 0 
+                ? 'text-success-600 bg-success-50/20 border border-success-500/30' 
+                : 'text-error-600 bg-error-50/20 border border-error-500/30';
+            const changeIcon = stock.change >= 0 ? '▲' : '▼';
+            const favoriteClass = isFavorite(stock.symbol) ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500';
             
             return `
-                <div class="card p-6 hover:shadow-tier-2 hover:-translate-y-1 transition-all duration-200 border-l-4 border-primary-500 bg-gray-800 border-gray-700">
+                <div class="card p-6 hover:shadow-tier-2 hover:-translate-y-1 transition-all duration-200 border-l-4 border-primary-500 bg-gray-800 border-gray-700 relative group">
+                    <button class="favorite-btn absolute top-4 right-4 z-10 transition-all duration-200 ${favoriteClass}" data-symbol="${stock.symbol}">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        </svg>
+                    </button>
                     <div class="flex items-start justify-between mb-4">
                         <div>
                             <h3 class="text-lg font-bold text-white">${stock.symbol}</h3>
@@ -201,7 +299,7 @@
                     <div class="mb-4">
                         <p class="text-3xl font-bold text-white font-data">${formatCurrency(stock.price)}</p>
                         <div class="flex items-center space-x-2 mt-2">
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${changeClass}">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${changeClass}">
                                 <span class="mr-1">${changeIcon}</span>
                                 ${formatPercentage(stock.change)}
                             </span>
@@ -224,9 +322,82 @@
             `;
         }
 
+        // Search for a stock
+        function searchStock(query) {
+            if (!query) {
+                displayStocks(getViewedSymbols());
+                return;
+            }
+            
+            query = query.toUpperCase().trim();
+            if (query.length < 2) return;
+            
+            // Add to viewed symbols if not already there
+            const viewedSymbols = getViewedSymbols();
+            if (!viewedSymbols.includes(query)) {
+                // Add at the beginning and keep max 10 symbols
+                viewedSymbols.unshift(query);
+                if (viewedSymbols.length > 10) {
+                    viewedSymbols.pop();
+                }
+                saveViewedSymbols(viewedSymbols);
+            }
+            
+            displayStocks([query]);
+        }
+
+        // Create and update market chart
+        function createMarketChart(stocks) {
+            const gainers = stocks.filter(stock => stock.change > 0).length;
+            const losers = stocks.filter(stock => stock.change < 0).length;
+            const neutral = stocks.filter(stock => stock.change === 0).length;
+            
+            const ctx = document.getElementById('marketChart').getContext('2d');
+            
+            // Destroy previous chart if it exists
+            if (marketChart) {
+                marketChart.destroy();
+            }
+            
+            marketChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Em Alta', 'Em Baixa', 'Estáveis'],
+                    datasets: [{
+                        data: [gainers, losers, neutral],
+                        backgroundColor: [
+                            'rgba(5, 150, 105, 0.8)',  // Success color
+                            'rgba(220, 38, 38, 0.8)',  // Error color
+                            'rgba(156, 163, 175, 0.8)' // Gray color
+                        ],
+                        borderColor: [
+                            'rgba(5, 150, 105, 1)',
+                            'rgba(220, 38, 38, 1)',
+                            'rgba(156, 163, 175, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#fff',
+                                font: {
+                                    family: 'Inter'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // Replace the existing fetchStockData function with this one
-        async function fetchStockData() {
-            const symbols = ['GOAU4', 'BBAS3', 'PETR4'];
+        async function fetchStockData(symbols = STOCK_SYMBOLS) {
             const token = 'sb9Cd84Y9hW5eRharMMRuD';
             const results = [];
 
@@ -237,22 +408,33 @@
                     const data = await response.json();
 
                     if (!data || !data.results || !data.results[0]) {
+                        console.error(`Formato de resposta inválido para ${symbol}:`, data);
                         throw new Error(`Formato de resposta inválido para ${symbol}`);
                     }
 
                     const quote = data.results[0];
+                    console.log(`Dados para ${symbol}:`, quote); // Debug log
 
+                    // Extraction with proper checks and fallbacks
                     results.push({
                         symbol: quote.symbol,
-                        price: quote.regularMarketPrice,
-                        change: quote.regularMarketChangePercent,
-                        high52: quote.fiftyTwoWeekHigh,
-                        low52: quote.fiftyTwoWeekLow
+                        price: quote.regularMarketPrice || 0,
+                        change: quote.regularMarketChangePercent || 0,
+                        high52: quote.fiftyTwoWeekHigh || null,
+                        low52: quote.fiftyTwoWeekLow || null
                     });
 
                 } catch (error) {
                     console.error(`Erro ao buscar dados para ${symbol}:`, error);
-                    throw new Error('Falha ao buscar dados das ações');
+                    // Add an error placeholder
+                    results.push({
+                        symbol: symbol,
+                        price: 0,
+                        change: 0,
+                        high52: null,
+                        low52: null,
+                        error: true
+                    });
                 }
             }
 
@@ -263,15 +445,17 @@
         function updateMarketSummary(stocks) {
             const gainers = stocks.filter(stock => stock.change > 0).length;
             const losers = stocks.filter(stock => stock.change < 0).length;
-            const neutral = stocks.filter(stock => stock.change === 0).length;
+            const neutral = stocks.filter(stock => stock.change === 0 || stock.error).length;
             
             document.getElementById('gainersCount').textContent = gainers;
             document.getElementById('losersCount').textContent = losers;
             document.getElementById('neutralCount').textContent = neutral;
+            
+            createMarketChart(stocks);
         }
 
-        // Load and display stock data
-        async function loadStockData() {
+        // Display stocks based on symbol array
+        async function displayStocks(symbols) {
             const loadingState = document.getElementById('loadingState');
             const errorState = document.getElementById('errorState');
             const stockGrid = document.getElementById('stockGrid');
@@ -285,7 +469,7 @@
                 marketSummary.classList.add('hidden');
                 
                 // Fetch data
-                const stocks = await fetchStockData();
+                const stocks = await fetchStockData(symbols);
                 
                 // Verify if stocks data exists
                 if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
@@ -295,6 +479,22 @@
                 // Create stock cards
                 const stockCardsHTML = stocks.map(stock => createStockCard(stock)).join('');
                 stockGrid.innerHTML = stockCardsHTML;
+                
+                // Add event listeners to favorite buttons
+                document.querySelectorAll('.favorite-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const symbol = this.getAttribute('data-symbol');
+                        if (isFavorite(symbol)) {
+                            removeFromFavorites(symbol);
+                            this.classList.remove('text-yellow-500');
+                            this.classList.add('text-gray-400', 'hover:text-yellow-500');
+                        } else {
+                            addToFavorites(symbol);
+                            this.classList.remove('text-gray-400', 'hover:text-yellow-500');
+                            this.classList.add('text-yellow-500');
+                        }
+                    });
+                });
                 
                 // Update market summary
                 updateMarketSummary(stocks);
@@ -318,14 +518,59 @@
             }
         }
 
+        // Toggle favorites view
+        let showingFavorites = false;
+        document.getElementById('favoritesToggle').addEventListener('click', function() {
+            showingFavorites = !showingFavorites;
+            const favorites = getFavorites();
+            
+            if (showingFavorites && favorites.length > 0) {
+                this.classList.add('bg-yellow-600');
+                this.classList.remove('bg-gray-800');
+                displayStocks(favorites);
+            } else {
+                this.classList.remove('bg-yellow-600');
+                this.classList.add('bg-gray-800');
+                displayStocks(getViewedSymbols());
+                showingFavorites = false;
+            }
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                searchStock(this.value);
+            }
+        });
+
+        // Refresh button handler
+        document.getElementById('refreshButton').addEventListener('click', function() {
+            if (showingFavorites) {
+                displayStocks(getFavorites());
+            } else {
+                displayStocks(getViewedSymbols());
+            }
+        });
+
         // Retry button handler
-        document.getElementById('retryButton').addEventListener('click', loadStockData);
+        document.getElementById('retryButton').addEventListener('click', function() {
+            displayStocks(getViewedSymbols());
+        });
 
         // Auto-refresh every 5 minutes
-        setInterval(loadStockData, 5 * 60 * 1000);
+        setInterval(function() {
+            if (showingFavorites) {
+                displayStocks(getFavorites());
+            } else {
+                displayStocks(getViewedSymbols());
+            }
+        }, 5 * 60 * 1000);
 
         // Load data on page load
-        document.addEventListener('DOMContentLoaded', loadStockData);
+        document.addEventListener('DOMContentLoaded', function() {
+            displayStocks(getViewedSymbols());
+        });
     </script>
 <script id="dhws-dataInjector" src="../public/dhws-data-injector.js"></script>
 </body>
