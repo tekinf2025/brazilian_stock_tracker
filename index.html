@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brazilian Fintech Dashboard</title>
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<script type="module" src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Fbrazilian4507back.builtwithrocket.new&_be=https%3A%2F%2Fapplication.rocket.new&_v=0.1.5"></script>
+</head>
+<body class="bg-background font-inter">
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="card p-8 max-w-md w-full text-center">
+            <div class="gradient-trust w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-semibold text-text-primary mb-4">Brazilian Fintech Platform</h1>
+            <p class="text-text-secondary mb-8">Redirecting to your stock market dashboard...</p>
+            <div class="skeleton h-2 rounded-full mb-4"></div>
+            <p class="text-sm text-text-muted">Loading your personalized financial interface</p>
+        </div>
+    </div>
+
+    <script>
+        // Redirect to stock market dashboard after 2 seconds
+        setTimeout(function() {
+            window.location.href = 'pages/stock_market_dashboard.html';
+        }, 2000);
+
+        // Show loading progress
+        let progress = 0;
+        const progressBar = document.querySelector('.skeleton');
+        const interval = setInterval(function() {
+            progress += 10;
+            if (progress >= 100) {
+                clearInterval(interval);
+                progress = 100;
+            }
+            progressBar.style.width = progress + '%';
+        }, 200);
+    </script>
+<script id="dhws-dataInjector" src="/public/dhws-data-injector.js"></script>
+</body>
+</html>
